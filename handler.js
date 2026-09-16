@@ -26,7 +26,7 @@ export const handler = async (event, context) => {
         });
 
         const validate = validateColumns(records);
-
+        
         if(!validate.valid){
             return{
                 statusCode: 400,
