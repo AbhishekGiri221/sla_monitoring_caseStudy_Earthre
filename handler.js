@@ -2,7 +2,7 @@ import { pool } from "./db.js";
 import { parse } from "csv-parse/sync";
 import  { validateColumns } from "./column_validator.js";
 import { getCleanRecord } from "./cleanRecord.js";
-import {insertRecord} from "./insertRecord.js";
+import {insertRecords} from "./insertRecord.js";
 export const handler = async (event, context) => {
     try {
        
@@ -39,7 +39,7 @@ export const handler = async (event, context) => {
         // console.log(cleanRecords);
 
         //inserting clean Records into DB
-        const result = await insertRecord(cleanRecords);
+        const result = await insertRecords(cleanRecords);
 
         return{
             statusCode: 200,
