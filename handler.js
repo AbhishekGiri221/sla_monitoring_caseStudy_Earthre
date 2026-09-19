@@ -3,6 +3,8 @@ import { parse } from "csv-parse/sync";
 import  { validateColumns } from "./column_validator.js";
 import { getCleanRecord } from "./cleanRecord.js";
 import {insertRecords} from "./insertRecord.js";
+import { filterRow } from "./duplicateRow_validator.js";
+
 export const handler = async (event, context) => {
     try {
        
@@ -34,7 +36,11 @@ export const handler = async (event, context) => {
             }
         }
 
-        const cleanRecords = records.map((record) => getCleanRecord(record))
+        //filtering Duplicate Records
+        const filteredRecords = filterRow(records)
+
+        //Cleaning messy data
+        const cleanRecords = filteredRecords.map((record) => getCleanRecord(record))
 
         // console.log(cleanRecords);
 

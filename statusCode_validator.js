@@ -1,4 +1,4 @@
-const cleanStatusCode = (statusCode)=>{
+export const cleanStatusCode = (statusCode)=>{
     if(statusCode === null || statusCode === undefined || statusCode === ""){
         return null
     }

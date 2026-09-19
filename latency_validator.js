@@ -1,4 +1,4 @@
-const cleanLatency = (latency,unit) => {
+export const cleanLatency = (latency,unit) => {
     if (latency === null || latency === undefined || latency === "") {
         return null;
     }
