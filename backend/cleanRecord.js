@@ -1,6 +1,6 @@
-import { cleanTimestamp } from "./timeStamp_validator.js";
-import { cleanStatusCode } from "./statusCode_validator.js";
-import { cleanLatency } from "./latency_validator.js";
+import { cleanTimestamp } from "../timeStamp_validator.js";
+import { cleanStatusCode } from "../statusCode_validator.js";
+import { cleanLatency } from "../latency_validator.js";
 
 export const getCleanRecord = (records) =>{
     return{
