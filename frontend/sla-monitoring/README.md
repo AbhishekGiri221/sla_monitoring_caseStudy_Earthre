@@ -1,14 +1,13 @@
 # SLA Monitoring Dashboard
 
-A serverless SLA monitoring dashboard that accepts health-check CSV files, validates and cleans the data, stores the cleaned records in PostgreSQL, and provides statistics and filterable monitoring logs.
+A serverless SLA monitoring dashboard built as a take-home assignment for the **Full Stack Engineer** position at EarthRe.
 
-## Live Demo
+The application allows users to upload health-check CSV data, validates and cleans the records, stores the processed data in PostgreSQL, and provides monitoring statistics and filterable logs.
 
-**Dashboard:** `YOUR_FRONTEND_DEPLOYED_URL`
+## Live Application
 
-**API:** `YOUR_API_GATEWAY_URL`
-
-> Last verified live: `YYYY-MM-DD`
+**Live URL:**
+https://sla-monitoring-case-study-earthre-sooty.vercel.app
 
 ---
 
@@ -17,7 +16,7 @@ A serverless SLA monitoring dashboard that accepts health-check CSV files, valid
 ```text
 React Frontend
       |
-      | CSV Upload / API Requests
+      | HTTPS
       v
 AWS API Gateway
       |
@@ -37,31 +36,46 @@ React Dashboard
 
 ### Components
 
-**React**
+#### React
 
-Used for the dashboard UI, CSV upload, statistics display, date filtering and logs table.
+Used for:
 
-**AWS API Gateway**
+* CSV file upload
+* Dashboard UI
+* Statistics display
+* Date/date-range filtering
+* Monitoring logs table
+* Loading and error states
 
-Provides HTTP endpoints for the frontend and routes requests to the Lambda function.
+#### AWS API Gateway
 
-**AWS Lambda**
+Provides the HTTP API endpoints and routes requests to the Lambda function.
 
-Acts as the stateless backend. It receives the CSV, parses and validates records, cleans invalid values, removes exact duplicates and stores the cleaned records.
+#### AWS Lambda
 
-**Neon PostgreSQL**
+The backend is implemented as a stateless serverless function.
 
-Persistent database used to store the cleaned health-check records.
+It handles:
+
+1. CSV parsing
+2. Required-column validation
+3. Data cleaning
+4. Duplicate removal
+5. Database insertion
+6. Statistics queries
+7. Log queries
+
+#### Neon PostgreSQL
+
+Used as the persistent database for cleaned health-check records.
 
 ---
 
-## API Endpoints
+# API Endpoints
 
-### `POST /upload`
+## `POST /upload`
 
-Accepts a CSV file as the request body.
-
-Processing flow:
+Accepts a CSV file and processes the records.
 
 ```text
 CSV
@@ -70,18 +84,18 @@ Parse
  ↓
 Validate columns
  ↓
-Clean data
+Clean records
  ↓
 Remove exact duplicates
  ↓
-Insert into PostgreSQL
+Store in PostgreSQL
 ```
 
-### `GET /stats`
+## `GET /stats`
 
-Returns dashboard statistics calculated from the stored records.
+Returns dashboard statistics calculated from the stored monitoring records.
 
-Current statistics:
+The dashboard currently displays:
 
 * Total checks
 * Total services
@@ -91,115 +105,107 @@ Current statistics:
 * Average latency
 * P95 latency
 
-### `GET /logs`
+## `GET /logs`
 
-Returns the underlying health-check records.
+Returns the underlying monitoring records.
 
-Supports filtering by date/date range.
+The endpoint supports date-based filtering for the dashboard.
 
 ---
 
-## Data Quality Handling
+# Data Quality Handling
 
-The input data contains several data-quality issues.
+The provided datasets contain several data-quality issues. The application handles them during ingestion.
 
-### 1. Mixed latency units
+## Mixed latency units
 
-Latency can be provided in milliseconds or seconds.
+Latency values can be provided in milliseconds or seconds.
 
-The application normalizes all values to milliseconds.
+All values are normalized to milliseconds.
 
 ```text
 100 ms → 100 ms
 1.5 s  → 1500 ms
 ```
 
-### 2. Missing latency
+## Missing latency
 
 Missing latency values are stored as `NULL`.
 
-They are not replaced with an arbitrary value because doing so could distort latency statistics.
+They are not replaced with an arbitrary value because doing so could affect latency statistics.
 
-### 3. Negative latency
+## Negative latency
 
-Negative latency values are invalid.
+Negative latency values are considered invalid and are converted to `NULL`.
 
-They are converted to `NULL`.
+## Invalid status codes
 
-### 4. Invalid status codes
+Status codes are validated to ensure they are between `100` and `599`.
 
-HTTP status codes are expected to be between `100` and `599`.
+Invalid values such as `999` are converted to `NULL`.
 
-Values outside this range are treated as invalid and stored as `NULL`.
+## Mixed timestamp formats
 
-For example:
+The input data contains both ISO timestamps and Unix timestamps.
 
-```text
-999 → NULL
-```
+They are normalized to UTC before being stored in PostgreSQL.
 
-### 5. Mixed timestamp formats
-
-The input contains ISO timestamps and Unix timestamps.
-
-All timestamps are normalized to UTC before being stored.
-
-### 6. Exact duplicate rows
+## Exact duplicate rows
 
 Exact duplicate rows are removed before insertion.
 
-A duplicate means the complete record is identical.
+A record is considered a duplicate only when the complete record is identical.
 
-Records with the same service and timestamp but different values are not automatically considered duplicates.
+Records with the same service and timestamp but different values are not automatically treated as duplicates.
 
-### 7. Agent records
+## Agent data
 
-`agent-1` provides the regular 15-minute monitoring sequence.
+The supplied data contains a regular monitoring sequence from `agent-1` and intermittent records from `agent-2`.
 
-`agent-2` is intermittent/secondary in the provided data, so its absence is not automatically treated as missing monitoring data.
-
----
-
-## Statistics Assumptions
-
-Availability is calculated using HTTP status codes:
-
-```text
-200–399 → successful
-400–599 → failed
-```
-
-Invalid/NULL status codes are excluded from the availability calculation.
-
-Availability:
-
-```text
-successful checks
------------------ × 100
-valid checks
-```
-
-Average latency and P95 latency are calculated from available valid latency values.
-
-P95 latency represents the latency threshold below which approximately 95% of the available latency observations fall.
+The application does not assume that every missing `agent-2` record represents a monitoring failure.
 
 ---
 
-## Upload Behaviour
+# Statistics Assumptions
 
-Each CSV upload is treated as a new monitoring dataset.
+Availability is calculated using HTTP status codes.
+
+```text
+200–399 → Successful
+400–599 → Failed
+```
+
+Records with invalid or missing status codes are excluded from the availability calculation.
+
+Availability is calculated as:
+
+```text
+Successful valid checks
+---------------------- × 100
+Total valid status checks
+```
+
+Average latency and P95 latency are calculated using available latency values.
+
+P95 latency represents the latency value below which approximately 95% of the available latency observations fall.
+
+---
+
+# Upload Behaviour
+
+Each CSV upload is treated as a **new monitoring dataset**.
 
 The existing dataset is replaced when a new CSV is uploaded.
 
-This keeps the dashboard statistics and logs representative of the currently uploaded dataset and avoids mixing multiple independent datasets.
+This keeps the dashboard statistics and logs representative of the currently uploaded dataset rather than combining multiple independent datasets.
 
-The replacement is performed within the database transaction so that a failed upload does not leave the database partially replaced.
+The replacement and insertion are performed within a database transaction so that a failed upload does not leave the database partially updated.
 
 ---
 
-## Database
+# Database Schema
 
-PostgreSQL table:
+The application uses the following PostgreSQL table:
 
 ```sql
 CREATE TABLE health_checks(
@@ -217,146 +223,217 @@ CREATE TABLE health_checks(
 
 ---
 
-## Dashboard
+# Frontend
 
-The dashboard contains:
+The dashboard contains three main areas.
 
 ### Statistics
 
-A collapsible statistics section displaying the calculated monitoring metrics.
+A collapsible statistics section displays the calculated monitoring metrics.
 
 ### Logs
 
-A table containing the underlying health-check records.
+A table displays the underlying health-check records.
 
-### Date filtering
+### Filtering
 
-Logs can be filtered using:
+The logs can be filtered by:
 
-* A single date
-* A date range
+* Single date
+* Date range
 
-### Loading and empty states
+The UI also handles:
 
-The frontend distinguishes between:
-
-* Loading data
-* Successfully loaded data
-* No data available
-* Request failure
+* Loading states
+* Empty states
+* API errors
+* Upload status
 
 ---
 
-## Running Locally
-
-### Backend
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Set the PostgreSQL connection string:
-
-```env
-DATABASE_URL=your_neon_database_url
-```
-
-Deploy/run the Lambda using the configured AWS setup.
+# Technology Stack
 
 ### Frontend
 
+* React
+* JavaScript
+* Axios
+* Vite
+
+### Backend
+
+* Node.js
+* AWS Lambda
+* AWS API Gateway
+
+### Database
+
+* PostgreSQL
+* Neon
+
+### Other
+
+* `csv-parse`
+
+---
+
+# Project Structure
+
+```text
+project/
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── index.html
+│   ├── package.json
+│   └── ...
+│
+├── backend/
+│   ├── handler.js
+│   ├── db.js
+│   ├── column_validator.js
+│   ├── cleanRecord.js
+│   ├── latency_validator.js
+│   ├── statusCode_validator.js
+│   ├── timeStamp_validator.js
+│   ├── duplicateRow_validator.js
+│   ├── insertRecord.js
+│   ├── stats.js
+│   ├── logs.js
+│   └── package.json
+│
+└── README.md
+```
+
+---
+
+# Running Locally
+
+## Frontend
+
+Navigate to the frontend:
+
+```bash
+cd frontend
+```
+
 Install dependencies:
 
 ```bash
 npm install
 ```
 
-Configure the API URL:
-
-```js
-const API_URL = "https://leszkwm423.execute-api.eu-north-1.amazonaws.com";
-```
-
-Run the development server:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
+The application will be available at the local Vite development URL.
+
+## Backend
+
+The backend is deployed as an AWS Lambda function and uses the deployed API Gateway endpoint.
+
+The Lambda function requires a PostgreSQL connection string through the `DATABASE_URL` environment variable.
+
+Example:
+
+```env
+DATABASE_URL=your_neon_database_connection_string
+```
+
+Database credentials should not be committed to GitHub.
+
 ---
 
-## Deployment
+# Deployment
 
-### Backend
+## Frontend
+
+The React frontend is deployed using Vercel.
+
+**Live application:**
+
+https://sla-monitoring-case-study-earthre-sooty.vercel.app
+
+The frontend communicates with the deployed AWS API Gateway endpoint.
+
+## Backend
 
 The backend is deployed using:
 
 * AWS Lambda
 * AWS API Gateway
-* Neon PostgreSQL
 
-### Frontend
-
-The React application is deployed using:
-
-`YOUR_FRONTEND_HOSTING_PLATFORM`
-
-The deployed frontend communicates with the deployed API Gateway endpoint.
+The database is hosted on Neon PostgreSQL.
 
 ---
 
-## Redeployment
-
-### Backend
-
-Update the Lambda source/deployment package and redeploy the Lambda function.
-
-Verify:
+# Deployment Architecture
 
 ```text
-GET /stats
-GET /logs
-POST /upload
+                         Internet
+                            |
+                            v
+                  +-------------------+
+                  |      Vercel       |
+                  |  React Frontend   |
+                  +---------+---------+
+                            |
+                            | HTTPS
+                            v
+                  +-------------------+
+                  |   API Gateway     |
+                  +---------+---------+
+                            |
+                            v
+                  +-------------------+
+                  |    AWS Lambda     |
+                  +---------+---------+
+                            |
+                            | PostgreSQL
+                            v
+                  +-------------------+
+                  |  Neon PostgreSQL  |
+                  +-------------------+
 ```
-
-### Frontend
-
-Build the application:
-
-```bash
-npm run build
-```
-
-Deploy the generated production build using the configured hosting provider.
 
 ---
 
-## What I Would Improve With More Time
+# Design Decisions
 
-With more time, I would consider:
+The implementation intentionally focuses on the requirements of the assignment.
 
-* More detailed service-level SLA calculations
-* Service-specific dashboards
+Authentication, multi-tenancy and CI/CD pipelines were not implemented because they were outside the requested scope.
+
+The backend is stateless and the persistent application data is stored in PostgreSQL.
+
+Batch database inserts are used during CSV ingestion to avoid sending an excessive number of PostgreSQL parameters in a single query.
+
+---
+
+# What I Would Improve With More Time
+
+With additional time, I would consider:
+
+* Service-specific SLA calculations
+* More detailed service-level metrics
+* Latency and availability charts
 * More advanced log filtering
 * Pagination for very large datasets
-* Better visualization of latency and availability trends
 * More comprehensive automated tests
-* Improved upload progress and error reporting
+* Improved upload progress feedback
+* More detailed error reporting
 
-These were intentionally kept out of the current implementation to keep the solution focused on the requirements of the assignment.
+These were intentionally kept outside the current implementation to keep the solution focused on the assignment requirements.
 
 ---
 
-## Tech Stack
+# Live Demo
 
-* React
-* JavaScript
-* Axios
-* Node.js
-* AWS Lambda
-* AWS API Gateway
-* PostgreSQL
-* Neon
-* `csv-parse`
+**Application:**
+https://sla-monitoring-case-study-earthre-sooty.vercel.app
+
+The deployed application can be used to upload the provided monitoring CSV data and view the resulting statistics and monitoring logs.
