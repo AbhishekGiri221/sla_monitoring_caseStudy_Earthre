@@ -16,9 +16,8 @@ function Dashboard() {
     const [uploading, setUploading] = useState(false);
     const [loadingLogs, setLoadingLogs] = useState(false);
 
-    // -----------------------------
+
     // Fetch statistics
-    // -----------------------------
     const fetchStats = async () => {
         try {
             const response = await axios.get(`${API_URL}/stats`);
