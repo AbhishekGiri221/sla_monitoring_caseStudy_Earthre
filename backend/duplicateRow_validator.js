@@ -1,6 +1,15 @@
 export const filterRow = (records)=>{
-    return records.filter((value,index,array)=>{
-        return index === array.findIndex(obj => JSON.stringify(obj) === JSON.stringify(value));
+    const seen = new Set();
+
+    return records.filter((value)=>{
+        const key = JSON.stringify(value);
+        
+        if(seen.has(key)){
+            return false;
+        }
+
+        seen.add(key);
+        return true;
     })
 }
 

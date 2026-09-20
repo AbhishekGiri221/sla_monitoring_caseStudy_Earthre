@@ -10,7 +10,7 @@ const requiredColumns = [
 ];
 
 export const validateColumns = (record)=>{
-    
+    console.log("length got in validator", record.length);
     if(record.length == 0){
         return{
             valid : false,
@@ -19,7 +19,8 @@ export const validateColumns = (record)=>{
     }
 
     const recordColumn = Object.keys(record[0]);
-
+    console.log("recordColumn is : ", recordColumn);
+    
     const missingColumns = requiredColumns.filter(column => !recordColumn.includes(column));
 
     if(missingColumns.length > 0){
